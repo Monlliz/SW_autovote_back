@@ -1,0 +1,7 @@
+Flask
+flask-cors
+flask-pymongo
+pymongo
+marshmallow
+requests
+google-genai
