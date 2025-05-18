@@ -1,3 +1,5 @@
+import os
+
 class Config:
-    SECRET_KEY = 'supersecretkey'
-    MONGO_URI = 'mongodb+srv://Monlliz:Monlliz@miproyectito.nkjcl.mongodb.net/db_voto?retryWrites=true&w=majority&appName=MiProyectito'
+    SECRET_KEY = os.getenv('SECRET_KEY')
+    MONGO_URI = os.getenv('MONGO_URI')
