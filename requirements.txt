@@ -5,3 +5,4 @@ pymongo
 marshmallow
 requests
 google-genai
+gunicorn
