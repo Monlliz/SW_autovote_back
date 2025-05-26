@@ -292,90 +292,90 @@ preguntas = {
             "numero": 1,
             "nombre": "Economía y Empleo",
             "preguntas": [
-                "¿Apoya políticas para crear más empleo aunque aumente el gasto público?",
-                "¿Está a favor de incentivos para formalizar el trabajo informal?",
-                "¿Cree que es clave capacitar a los trabajadores para nuevos empleos?"
+                "El Estado debe intervenir activamente en la economía para reducir las desigualdades de ingresos entre los ciudadanos.",
+                "Las empresas privadas son más eficientes que las instituciones públicas para generar empleo y riqueza.",
+                "Los trabajadores deberían tener mayor participación en las decisiones de las empresas donde laboran."
             ]
         },
         {
             "numero": 2,
             "nombre": "Educación",
             "preguntas": [
-                "¿Cree que la educación debe enfocarse más en tecnología y oficios?",
-                "¿Apoya un sistema que combine educación pública y privada de forma justa?",
-                "¿Está de acuerdo en mejorar la educación en zonas rurales?"
+                "La educación superior debería ser gratuita para todos los estudiantes, independientemente de su situación económica.",
+                "Las escuelas privadas contribuyen positivamente a mejorar la calidad general del sistema educativo.",
+                "Los contenidos curriculares deberían adaptarse específicamente a las necesidades de cada comunidad local."
             ]
         },
         {
             "numero": 3,
             "nombre": "Salud",
             "preguntas": [
-                "¿Apoya un sistema de salud gratuito y para todos?",
-                "¿Está a favor de fortalecer la prevención en salud más que la atención hospitalaria?",
-                "¿Cree que el sector privado debe colaborar más con el público en salud?"
+                "El acceso a servicios de salud de calidad es un derecho que el Estado debe garantizar a todos los ciudadanos.",
+                "Los seguros privados de salud mejoran la eficiencia y calidad de la atención médica.",
+                "Los recursos públicos en salud deberían priorizarse hacia los sectores de menores ingresos."
             ]
         },
         {
             "numero": 4,
             "nombre": "Seguridad y Justicia",
             "preguntas": [
-                "¿Apoya usar más tecnología para combatir el crimen?",
-                "¿Cree que deberían endurecerse las penas para delitos graves?",
-                "¿Está a favor de mejorar la reinserción de presos?"
+                "Aumentar las penas de prisión es una medida eficaz para reducir la criminalidad.",
+                "Los programas de reinserción social son más importantes que el castigo para reducir la reincidencia delictiva.",
+                "Las fuerzas policiales deberían tener mayores facultades para combatir la inseguridad ciudadana."
             ]
         },
         {
             "numero": 5,
             "nombre": "Medio Ambiente",
             "preguntas": [
-                "¿Apoya que el país avance hacia energías limpias?",
-                "¿Está a favor de sancionar más fuerte a las empresas que contaminan?",
-                "¿Cree que las comunidades deben decidir sobre su medio ambiente?"
+                "La protección del medio ambiente debe ser una prioridad, incluso si esto limita el crecimiento económico.",
+                "Las empresas deberían estar sujetas a regulaciones ambientales más estrictas, aunque esto aumente sus costos operativos.",
+                "Los ciudadanos individuales tienen la responsabilidad principal de adoptar prácticas sostenibles para proteger el medio ambiente."
             ]
         },
         {
             "numero": 6,
             "nombre": "Infraestructura y Transporte",
             "preguntas": [
-                "¿Apoya modernizar el transporte público para reducir el tráfico?",
-                "¿Está a favor de invertir más en carreteras y servicios básicos?",
-                "¿Cree que la conectividad digital es tan importante como la física?"
+                "El transporte público debe ser subsidiado por el Estado para garantizar el acceso de todos los ciudadanos.",
+                "La construcción de infraestructura debería ser realizada principalmente por empresas privadas mediante concesiones.",
+                "Las inversiones en infraestructura rural deben tener la misma prioridad que las inversiones en áreas urbanas."
             ]
         },
         {
             "numero": 7,
             "nombre": "Política Social y Derechos Humanos",
             "preguntas": [
-                "¿Apoya dar ayudas directas a los más pobres?",
-                "¿Está de acuerdo en fortalecer la protección a grupos vulnerables?",
-                "¿Cree que se deben crear organismos independientes para vigilar los derechos humanos?"
+                "El Estado debe implementar políticas específicas para promover la igualdad de oportunidades entre diferentes grupos sociales.",
+                "Los programas de asistencia social deberían estar condicionados al cumplimiento de requisitos específicos por parte de los beneficiarios.",
+                "La diversidad cultural y étnica enriquece y fortalece la sociedad."
             ]
         },
         {
             "numero": 8,
             "nombre": "Gobernabilidad y Reforma Política",
             "preguntas": [
-                "¿Apoya limitar la reelección de autoridades?",
-                "¿Cree que la ciudadanía debe participar más en las decisiones políticas?",
-                "¿Está a favor de reformar la justicia para hacerla más independiente?"
+                "Los ciudadanos deberían tener mayor participación directa en las decisiones de política pública a través de mecanismos como consultas populares.",
+                "Un gobierno eficiente es más importante que uno que permite amplia participación ciudadana en la toma de decisiones.",
+                "La información sobre el funcionamiento del gobierno debe ser completamente transparente y accesible para todos los ciudadanos."
             ]
         },
         {
             "numero": 9,
             "nombre": "Cultura, Ciencia y Tecnología",
             "preguntas": [
-                "¿Apoya más fondos para la cultura y el arte?",
-                "¿Está de acuerdo en aumentar la inversión en ciencia y tecnología?",
-                "¿Cree que la alfabetización digital debería ser prioridad?"
+                "El Estado debe invertir significativamente en investigación científica y desarrollo tecnológico, incluso si los beneficios no son inmediatos.",
+                "La preservación y promoción de la cultura nacional debe ser una responsabilidad prioritaria del gobierno.",
+                "Las universidades y centros de investigación públicos son fundamentales para el desarrollo científico del país."
             ]
         },
         {
             "numero": 10,
             "nombre": "Relaciones Exteriores",
             "preguntas": [
-                "¿Apoya fortalecer alianzas regionales para el desarrollo económico?",
-                "¿Cree que deben endurecerse las políticas migratorias?",
-                "¿Está a favor de que el país firme acuerdos contra el cambio climático?"
+                "La participación en organizaciones internacionales fortalece la capacidad del país para enfrentar desafíos globales.",
+                "Las decisiones de política exterior deben priorizarse según los intereses nacionales, incluso si esto genera tensiones con otros países.",
+                "Los acuerdos comerciales internacionales benefician el desarrollo económico del país."
             ]
         }
     ]
