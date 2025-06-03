@@ -1,13 +1,52 @@
 from flask import Blueprint, request, jsonify
 from bson import ObjectId
 from app import mongo
+import bcrypt
+import jwt
 from app.schemas import VotanteSchema  # importamos el schema
+from app.config import Config
+from app.auth import token_required  # importa el decorador
 
 votantes_bp = Blueprint('votantes', __name__)
 db = mongo.db.v_votantes
 
+
+
+# Acceso directo a las variables de clase
 votante_schema = VotanteSchema()
 
+#*************************************************************************************************************
+# -------------------
+# 1. Hashear contraseña
+# -------------------
+def hash_password(password):
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')# Guardamos como string para que MongoDB no tenga problemas
+
+# -------------------
+# 2. Verificar contraseña
+# -------------------
+def check_password(password, hashed):
+    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+
+#-------------------------
+#3. Crear Token
+#-------------------------
+
+#Palabra secreta
+SECRET_KEY = Config.SECRET_KEY
+JWT_ALGORITHM = Config.JWT_ALGORITHM
+
+def generar_token(votante_id):
+    payload = {
+        "votante_id": str(votante_id)
+    }
+    token = jwt.encode(payload, SECRET_KEY, JWT_ALGORITHM)
+    return token
+
+
+#****************************************************************************************************************    
 # Crear votante con validación
 @votantes_bp.route('/', methods=['POST'])
 def create_votante():
@@ -17,11 +56,17 @@ def create_votante():
         if errores:
             return jsonify({'errores': errores})
         
+          # Hash de la contraseña
+        if 'password' in data:
+            password_plano = data['password']
+            data['password'] = hash_password(password_plano)
+            
+        #Guardar en la base de datos
         result = db.insert_one(data)
         
         votante_creado = db.find_one({'_id': result.inserted_id}) # Buscar el votante creado
         votante_creado['_id'] = str(votante_creado['_id']) # Convertir _id a string para poder enviarlo en JSON
-        
+
         return jsonify(votante_creado), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -54,6 +99,53 @@ def get_votante_by_correo(correo):
 
     votante['_id'] = str(votante['_id'])
     return jsonify(votante)
+
+
+#-----------------------------------------MANUAL------------------------------
+#Buscar por correo y contraseña
+@votantes_bp.route('/login/', methods=['POST'])
+def get_votante_by_login():
+    data = request.json
+    correo = data['correo']
+    password = data['password']
+    
+    votante = db.find_one({'correo': correo})
+    #validar contraseña
+    res = check_password(password,votante['password'])
+    token = generar_token('_id')
+
+    if not res:
+        return jsonify({"Contraseña invalida"}) 
+    
+    if not votante:
+        return jsonify({'error': 'Votante no encontrado'})
+
+    votante['_id'] = str(votante['_id'])
+     
+    print(jsonify(votante))
+    return jsonify({"votante": votante, "token": token})
+
+# Actualizar votante MANUAL
+@votantes_bp.route('/manual/<id>', methods=['PUT'])
+@token_required #autorizacion de token 
+def update_votante_manual(id):
+    try:
+        data = request.json
+        errores = votante_schema.validate(data, partial=True)
+        if errores:
+            return jsonify({'errores': errores})
+        
+        result = db.update_one({'_id': ObjectId(id)}, {'$set': data})
+        if result.matched_count == 0:
+            return jsonify({'error': 'Votante no encontrado'})
+        
+        updated_votante = db.find_one({'_id': ObjectId(id)})
+        updated_votante['_id'] = str(updated_votante['_id'])
+        return jsonify(updated_votante)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+#--------------------------------FIN MANUAL------------------------------------------------------------
+
 
 # Actualizar votante con validación
 @votantes_bp.route('/<id>', methods=['PUT'])
