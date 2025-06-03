@@ -13,3 +13,4 @@ class Config:
 
     # Algoritmo que se usará para la codificación y decodificación JWT; por defecto HS256
     JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+    PORT = int(os.environ.get("PORT", 5000))
