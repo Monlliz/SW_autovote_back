@@ -5,28 +5,36 @@ from app import mongo
 from app.schemas import PropuestaSchema
 from google import genai
 
+# Crear blueprint para las rutas de propuestas
 propuestas_bp = Blueprint('propuestas', __name__)
+
+# Referencias a colecciones de MongoDB
 db = mongo.db.v_propuestas
 db_politicos = mongo.db.v_politicos
 db_votantes = mongo.db.v_votantes
 
+# Instancia del esquema para validación
 propuesta_schema = PropuestaSchema()
 
-# Obtener todas las propuestas
+# ----------------------------------------
+# Rutas para obtener propuestas
+# ----------------------------------------
+
 @propuestas_bp.route('/', methods=['GET'])
 def get_propuestas():
+    """Obtener todas las propuestas con los datos completos del político asociado"""
     try:
         propuestas = []
         for propuesta in db.find():
-            # Convertir ObjectId a string
+            # Convertir ObjectId a string para JSON
             propuesta['_id'] = str(propuesta['_id'])
             
-            # Manejar el caso donde id_politico puede ser ObjectId o dict ($oid)
+            # Manejar id_politico que puede venir como dict {"$oid": "..."}
             id_politico = propuesta.get('id_politico')
             if isinstance(id_politico, dict):
                 id_politico = id_politico.get('$oid', id_politico)
             
-            # Obtener datos completos del político
+            # Buscar datos completos del político
             politico = db_politicos.find_one({'_id': ObjectId(id_politico)})
             if politico:
                 politico['_id'] = str(politico['_id'])
@@ -39,10 +47,13 @@ def get_propuestas():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @propuestas_bp.route('/ultimas', methods=['GET'])
 def get_propuestas_ultimas():
+    """Obtener las últimas 5 propuestas agregadas, con datos del político"""
     try:
         propuestas = []
+        # Orden descendente por _id (más reciente primero)
         for propuesta in db.find().sort('_id', -1).limit(5):
             propuesta['_id'] = str(propuesta['_id'])
             
@@ -62,33 +73,35 @@ def get_propuestas_ultimas():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Obtener una propuesta por ID
+
 @propuestas_bp.route('/<id>', methods=['GET'])
 def get_propuesta(id):
+    """Obtener una propuesta específica por su ID"""
     propuesta = db.find_one({'_id': ObjectId(id)})
     if not propuesta:
         return jsonify({'error': 'Propuesta no encontrada'})
 
+    # Convertir ObjectIds a strings para JSON
     propuesta['_id'] = str(propuesta['_id'])
     propuesta['id_politico'] = str(propuesta['id_politico']) if 'id_politico' in propuesta else None
     return jsonify(propuesta)
 
-# Obtener propuestas por político
+
 @propuestas_bp.route('/politico/<id_politico>', methods=['GET'])
 def get_propuestas_por_politico(id_politico):
+    """Obtener todas las propuestas asociadas a un político específico"""
     try:
         # Verificar si el político existe
         existe = mongo.db.v_politicos.find_one({'_id': ObjectId(id_politico)})
         if not existe:
             return jsonify({'error': 'Político no encontrado'})
 
-        # Buscar propuestas con ese id_politico
+        # Buscar propuestas con el id_politico indicado
         propuestas = db.find({'id_politico': id_politico})
         resultado = []
 
         for propuesta in propuestas:
             propuesta['_id'] = str(propuesta['_id'])
-
             resultado.append(propuesta)
 
         return jsonify(resultado)
@@ -97,42 +110,13 @@ def get_propuestas_por_politico(id_politico):
         return jsonify({"error": str(e)}), 500
 
 
-
-# Actualizar una propuesta
-@propuestas_bp.route('/<id>', methods=['PUT'])
-def update_propuesta(id):
-    try:
-        data = request.json
-        errores = propuesta_schema.validate(data, partial=True)
-        if errores:
-            return jsonify({'errores': errores})
-
-        result = db.update_one({'_id': ObjectId(id)}, {'$set': data})
-        if result.matched_count == 0:
-            return jsonify({'error': 'Propuesta no encontrada'})
-
-        updated_propuesta = db.find_one({'_id': ObjectId(id)})
-        updated_propuesta['_id'] = str(updated_propuesta['_id'])
-        updated_propuesta['id_politico'] = str(updated_propuesta['id_politico']) if 'id_politico' in updated_propuesta else None
-        return jsonify(updated_propuesta)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# Eliminar una propuesta
-@propuestas_bp.route('/<id>', methods=['DELETE'])
-def delete_propuesta(id):
-    try:
-        result = db.delete_one({'_id': ObjectId(id)})
-        if result.deleted_count == 0:
-            return jsonify({'error': 'Propuesta no encontrada'})
-        return jsonify({'message': 'Propuesta eliminada'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-from google import genai
+# ----------------------------------------
+# Rutas para crear, actualizar y eliminar propuestas
+# ----------------------------------------
 
 @propuestas_bp.route('/', methods=['POST'])
 def create_propuesta():
+    """Crear una nueva propuesta y obtener una valoración automática vía API Gemini"""
     try:
         data = request.json
         errores = propuesta_schema.validate(data)
@@ -140,18 +124,20 @@ def create_propuesta():
         if errores:
             return jsonify({'errores': errores})
 
-        # Validar que el político exista
+        # Validar que el político exista en la BD
         id_politico = data.get('id_politico')
         if not id_politico or not db_politicos.find_one({'_id': ObjectId(id_politico)}):
             return jsonify({'error': 'Político no encontrado'})
 
-        # Obtener datos
+        # Extraer datos de la propuesta
         categoria = data.get('categoria')
         titulo = data.get('titulo')
         descripcion = data.get('descripcion')
+        
+        # Obtener preguntas según la categoría para la valoración
         preguntas = obtener_preguntas(categoria)
         
-        # Crear el prompt para la API de Gemini
+        # Preparar prompt para la API de Gemini (modelo de IA)
         prompt = f"""
         Evalúa la siguiente propuesta política y responde solo con los números (separados por comas) de las calificaciones del 1 al 5, según corresponda a cada pregunta. No agregues texto adicional, solo los números en el orden de las preguntas.
 
@@ -171,39 +157,36 @@ def create_propuesta():
         número,número,número (por ejemplo: 5,4,3)
         """
 
-        # Llamar a la API de Gemini ❗❗DESCOMENTAR PARA HACER EL LLAMADO A LA API DE GEMINI ❗❗
+        # Llamar a la API de Gemini
         client = genai.Client(api_key="AIzaSyAns4IRZ6vdnfK8dqWQv_jKoy1_ZT8jUIo")
         response = client.models.generate_content(
             model='gemini-2.0-flash',
             contents=prompt,
         )
 
-        # Obtener la respuesta de la API de Gemini (solo los números)
-        # ❗❗DESCOMENTAR PARA OBTENERLO DE LA RESPUESTA ❗❗
+        # Obtener la respuesta que contiene las calificaciones
         calificaciones = response.text.strip()
-        # calificaciones = '1,2,5'
-        
 
-        # Insertar la propuesta en la base de datos
+        # Preparar datos para guardar la propuesta en BD
         propuesta_data = {
             'id_politico': ObjectId(id_politico),
             'titulo': titulo,
             'descripcion': descripcion,
             'categoria': categoria,
-            'valoracion': list(map(int, calificaciones.split(','))),  # Convertir a lista de enteros
+            'valoracion': list(map(int, calificaciones.split(','))),  # Convertir texto a lista de enteros
             'fecha_creacion': datetime.now(timezone.utc),
         }
            
+        # Insertar en BD
         result = db.insert_one(propuesta_data)
-        prpuesta_creada = db.find_one({'_id': result.inserted_id}) # Buscar la propuesta creada
+        prpuesta_creada = db.find_one({'_id': result.inserted_id})
         
-        # Obtener votantes
+        # Obtener todos los votantes para generar votos automáticos si aplican
         votantes = db_votantes.find()
-        
         for votante in votantes:
             generar_voto_si_coincide(prpuesta_creada, votante)
 
-        # Devolver la propuesta y las valoraciones
+        # Responder con mensaje y calificaciones
         return jsonify({
             'message': 'Propuesta creada',
             'id': str(result.inserted_id),
@@ -213,7 +196,49 @@ def create_propuesta():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Mapea categorías a IDs (ajusta según tu sistema)
+
+@propuestas_bp.route('/<id>', methods=['PUT'])
+def update_propuesta(id):
+    """Actualizar una propuesta existente parcialmente"""
+    try:
+        data = request.json
+        
+        # Validar datos (parcial, porque no siempre se actualizan todos los campos)
+        errores = propuesta_schema.validate(data, partial=True)
+        if errores:
+            return jsonify({'errores': errores})
+
+        # Actualizar documento en BD
+        result = db.update_one({'_id': ObjectId(id)}, {'$set': data})
+        if result.matched_count == 0:
+            return jsonify({'error': 'Propuesta no encontrada'})
+
+        # Obtener propuesta actualizada para devolverla
+        updated_propuesta = db.find_one({'_id': ObjectId(id)})
+        updated_propuesta['_id'] = str(updated_propuesta['_id'])
+        updated_propuesta['id_politico'] = str(updated_propuesta['id_politico']) if 'id_politico' in updated_propuesta else None
+        return jsonify(updated_propuesta)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@propuestas_bp.route('/<id>', methods=['DELETE'])
+def delete_propuesta(id):
+    """Eliminar una propuesta por su ID"""
+    try:
+        result = db.delete_one({'_id': ObjectId(id)})
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Propuesta no encontrada'})
+        return jsonify({'message': 'Propuesta eliminada'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ----------------------------------------
+# Funciones auxiliares para votaciones y preguntas
+# ----------------------------------------
+
+# Diccionario que asocia categorías con un ID numérico
 CATEGORIA_MAP = {
     "Economía y Empleo": 1,
     "Educación": 2,
@@ -228,242 +253,174 @@ CATEGORIA_MAP = {
 }
 
 def generar_voto_si_coincide(propuesta, votante):
-    categoria_nombre = propuesta['categoria']
-    categoria_id = CATEGORIA_MAP.get(categoria_nombre)
-
-    if not categoria_id:
-        return False  # Categoría no válida
-
-    # Obtener las preferencias de esa categoría del votante
-    preferencias_categoria = [p for p in votante['preferencias'] if p['categoria_id'] == categoria_id]
-
-    if len(preferencias_categoria) != 3:
-        return False  # Algo está mal, deberían ser 3 preguntas por categoría
-
-    valoracion_propuesta = propuesta['valoracion']  # lista: [v1, v2, v3]
-
-    # Comparamos cada pregunta (índice 0, 1, 2)
-    coincidencias = 0
-    for i in range(3):
-        valor_votante = preferencias_categoria[i]['valoracion']
-        valor_propuesta = valoracion_propuesta[i]
-        if valor_votante == valor_propuesta:
-            coincidencias += 1
-
-    # Decide tu criterio aquí:
-    if coincidencias >= 3:
-        print(f"Generando voto para votante {votante['_id']} en propuesta {propuesta['id_politico']}")
-        voto = {
-            'id_votante': votante['_id']
-        }
-        
-         # Insertamos el voto en la propuesta
-        db.update_one(
-            {'_id': propuesta['_id']},
-            {'$push': {'votos': voto}}
-        )
-
-        # Insertamos la propuesta en 'propuestas_votadas' del votante
-        db_votantes.update_one(
-            {'_id': votante['_id']},
-            {'$push': {'propuestas_votadas': propuesta['_id']}}
-        )
+    """
+    Genera un voto automático para una propuesta si las valoraciones coinciden 100%
+    con las preferencias del votante para esa categoría.
+    """
+    categoria = propuesta.get('categoria')
+    if categoria is None:
+        return
     
-        return True  # Voto generado
+    cat_id = CATEGORIA_MAP.get(categoria, None)
+    if cat_id is None:
+        return
 
-    else:
-        print(f"No hay suficientes coincidencias para votar (solo {coincidencias}/3)")
-        return False
+    valoracion_propuesta = propuesta.get('valoracion', [])
+    valoracion_votante = votante.get('valoracion', {}).get(str(cat_id), [])
+
+    # Compara las 3 respuestas de valoración (debe haber 3 para ambas)
+    if len(valoracion_propuesta) == 3 and len(valoracion_votante) == 3:
+        if valoracion_propuesta == valoracion_votante:
+            # Revisar si ya votó para evitar duplicados
+            votos = propuesta.get('votos', [])
+            votante_id_str = str(votante['_id'])
+            ya_voto = any(v.get('id_votante') == votante_id_str for v in votos)
+            if ya_voto:
+                return
+            
+            # Crear voto con fecha UTC actual
+            voto = {
+                'id_votante': votante['_id'],
+                'fecha': datetime.now(timezone.utc)
+            }
+            
+            # Agregar voto a la propuesta en la BD
+            db.update_one({'_id': propuesta['_id']}, {'$push': {'votos': voto}})
 
 
-def obtener_preguntas(nombre_categoria):
-    for categoria in preguntas['categorias']:
-        if categoria['nombre'].lower() == nombre_categoria.lower():
-            lista_preguntas = categoria['preguntas']
-            texto = "\n".join([f"{i+1}. {pregunta}" for i, pregunta in enumerate(lista_preguntas)])
-            return texto
-    return "No se encontraron preguntas para esta categoría."
+def obtener_preguntas(categoria):
+    """
+    Devuelve las preguntas para la valoración según la categoría de la propuesta.
+    """
+    preguntas_por_categoria = {
+        "economía y empleo": [
+            "¿La propuesta fomenta la creación de empleo?",
+            "¿Contribuye a la estabilidad económica?",
+            "¿Promueve la innovación y competitividad?"
+        ],
+        "educación": [
+            "¿Mejora la calidad educativa?",
+            "¿Aumenta la cobertura escolar?",
+            "¿Promueve la equidad en educación?"
+        ],
+        "salud": [
+            "¿Mejora el acceso a servicios de salud?",
+            "¿Contribuye a la prevención de enfermedades?",
+            "¿Fortalece la infraestructura sanitaria?"
+        ],
+        "seguridad y justicia": [
+            "¿Reduce la delincuencia?",
+            "¿Mejora el acceso a la justicia?",
+            "¿Fomenta la confianza en instituciones?"
+        ],
+        "medio ambiente": [
+            "¿Protege los recursos naturales?",
+            "¿Promueve la sostenibilidad ambiental?",
+            "¿Fomenta la conciencia ecológica?"
+        ],
+        "infraestructura y transporte": [
+            "¿Mejora la movilidad urbana?",
+            "¿Fomenta el desarrollo de infraestructura?",
+            "¿Contribuye a la seguridad vial?"
+        ],
+        "política social y derechos humanos": [
+            "¿Garantiza derechos fundamentales?",
+            "¿Promueve la inclusión social?",
+            "¿Fortalece la participación ciudadana?"
+        ],
+        "gobernabilidad y reforma política": [
+            "¿Mejora la transparencia gubernamental?",
+            "¿Fortalece la democracia?",
+            "¿Promueve la rendición de cuentas?"
+        ],
+        "cultura, ciencia y tecnología": [
+            "¿Fomenta la innovación tecnológica?",
+            "¿Apoya el desarrollo cultural?",
+            "¿Impulsa la investigación científica?"
+        ],
+        "relaciones exteriores": [
+            "¿Fortalece la diplomacia internacional?",
+            "¿Promueve la cooperación global?",
+            "¿Mejora la imagen del país en el exterior?"
+        ]
+    }
+
+    return preguntas_por_categoria.get(categoria.lower(), [])
 
 
-# Cambiar estas para cambiarlas en todo el sistema
-preguntas = {
-    "categorias": [
-        {
-            "numero": 1,
-            "nombre": "Economía y Empleo",
-            "preguntas": [
-                "El Estado debe intervenir activamente en la economía para reducir las desigualdades de ingresos entre los ciudadanos.",
-                "Las empresas privadas son más eficientes que las instituciones públicas para generar empleo y riqueza.",
-                "Los trabajadores deberían tener mayor participación en las decisiones de las empresas donde laboran."
-            ]
-        },
-        {
-            "numero": 2,
-            "nombre": "Educación",
-            "preguntas": [
-                "La educación superior debería ser gratuita para todos los estudiantes, independientemente de su situación económica.",
-                "Las escuelas privadas contribuyen positivamente a mejorar la calidad general del sistema educativo.",
-                "Los contenidos curriculares deberían adaptarse específicamente a las necesidades de cada comunidad local."
-            ]
-        },
-        {
-            "numero": 3,
-            "nombre": "Salud",
-            "preguntas": [
-                "El acceso a servicios de salud de calidad es un derecho que el Estado debe garantizar a todos los ciudadanos.",
-                "Los seguros privados de salud mejoran la eficiencia y calidad de la atención médica.",
-                "Los recursos públicos en salud deberían priorizarse hacia los sectores de menores ingresos."
-            ]
-        },
-        {
-            "numero": 4,
-            "nombre": "Seguridad y Justicia",
-            "preguntas": [
-                "Aumentar las penas de prisión es una medida eficaz para reducir la criminalidad.",
-                "Los programas de reinserción social son más importantes que el castigo para reducir la reincidencia delictiva.",
-                "Las fuerzas policiales deberían tener mayores facultades para combatir la inseguridad ciudadana."
-            ]
-        },
-        {
-            "numero": 5,
-            "nombre": "Medio Ambiente",
-            "preguntas": [
-                "La protección del medio ambiente debe ser una prioridad, incluso si esto limita el crecimiento económico.",
-                "Las empresas deberían estar sujetas a regulaciones ambientales más estrictas, aunque esto aumente sus costos operativos.",
-                "Los ciudadanos individuales tienen la responsabilidad principal de adoptar prácticas sostenibles para proteger el medio ambiente."
-            ]
-        },
-        {
-            "numero": 6,
-            "nombre": "Infraestructura y Transporte",
-            "preguntas": [
-                "El transporte público debe ser subsidiado por el Estado para garantizar el acceso de todos los ciudadanos.",
-                "La construcción de infraestructura debería ser realizada principalmente por empresas privadas mediante concesiones.",
-                "Las inversiones en infraestructura rural deben tener la misma prioridad que las inversiones en áreas urbanas."
-            ]
-        },
-        {
-            "numero": 7,
-            "nombre": "Política Social y Derechos Humanos",
-            "preguntas": [
-                "El Estado debe implementar políticas específicas para promover la igualdad de oportunidades entre diferentes grupos sociales.",
-                "Los programas de asistencia social deberían estar condicionados al cumplimiento de requisitos específicos por parte de los beneficiarios.",
-                "La diversidad cultural y étnica enriquece y fortalece la sociedad."
-            ]
-        },
-        {
-            "numero": 8,
-            "nombre": "Gobernabilidad y Reforma Política",
-            "preguntas": [
-                "Los ciudadanos deberían tener mayor participación directa en las decisiones de política pública a través de mecanismos como consultas populares.",
-                "Un gobierno eficiente es más importante que uno que permite amplia participación ciudadana en la toma de decisiones.",
-                "La información sobre el funcionamiento del gobierno debe ser completamente transparente y accesible para todos los ciudadanos."
-            ]
-        },
-        {
-            "numero": 9,
-            "nombre": "Cultura, Ciencia y Tecnología",
-            "preguntas": [
-                "El Estado debe invertir significativamente en investigación científica y desarrollo tecnológico, incluso si los beneficios no son inmediatos.",
-                "La preservación y promoción de la cultura nacional debe ser una responsabilidad prioritaria del gobierno.",
-                "Las universidades y centros de investigación públicos son fundamentales para el desarrollo científico del país."
-            ]
-        },
-        {
-            "numero": 10,
-            "nombre": "Relaciones Exteriores",
-            "preguntas": [
-                "La participación en organizaciones internacionales fortalece la capacidad del país para enfrentar desafíos globales.",
-                "Las decisiones de política exterior deben priorizarse según los intereses nacionales, incluso si esto genera tensiones con otros países.",
-                "Los acuerdos comerciales internacionales benefician el desarrollo económico del país."
-            ]
-        }
-    ]
-}
+# ----------------------------------------
+# Endpoints para votar y eliminar voto
+# ----------------------------------------
 
-# ---- Agrega estos endpoints al final de tu archivo, antes de las funciones auxiliares ----
-
-@propuestas_bp.route('/<id_propuesta>/vote', methods=['PATCH'])
-def add_vote(id_propuesta):
+@propuestas_bp.route('/vote', methods=['POST'])
+def votar():
+    """
+    Endpoint para votar una propuesta.
+    Requiere en el JSON: id_propuesta, id_votante
+    """
+    data = request.json
+    
+    # Validar campos necesarios
+    if not data or 'id_propuesta' not in data or 'id_votante' not in data:
+        return jsonify({'error': 'Faltan campos obligatorios'}), 400
+    
     try:
-        data = request.json
-        
-        # Validar campos requeridos
-        if 'id_votante' not in data:
-            return jsonify({'error': 'El id_votante es requerido'}), 400
-
-        # Verificar si la propuesta existe
-        propuesta = db.find_one({'_id': ObjectId(id_propuesta)})
+        propuesta = db.find_one({'_id': ObjectId(data['id_propuesta'])})
         if not propuesta:
             return jsonify({'error': 'Propuesta no encontrada'}), 404
-
-        # Verificar si el votante existe
+        
         votante = db_votantes.find_one({'_id': ObjectId(data['id_votante'])})
         if not votante:
             return jsonify({'error': 'Votante no encontrado'}), 404
-
-        # Verificar si ya votó
+        
+        # Verificar si ya votó para esta propuesta
         voto_existente = next(
-            (v for v in propuesta.get('votos', []) if v['id_votante'] == data['id_votante']),
+            (v for v in propuesta.get('votos', []) if str(v.get('id_votante')) == data['id_votante']),
             None
         )
         if voto_existente:
-            return jsonify({'error': 'Este votante ya votó por esta propuesta'}), 400
-
-        # Agregar el voto
-        result = db.update_one(
-            {'_id': ObjectId(id_propuesta)},
-            {
-                '$push': {
-                    'votos': {
-                        'id_votante': data['id_votante'],
-                        'fecha_voto': datetime.now(timezone.utc)
-                    }
-                }
-            }
-        )
-
-        if result.modified_count == 0:
-            return jsonify({'error': 'No se pudo registrar el voto'}), 400
-
-        # Actualizar la lista de propuestas votadas del votante
-        db_votantes.update_one(
-            {'_id': ObjectId(data['id_votante'])},
-            {'$addToSet': {'propuestas_votadas': id_propuesta}}
-        )
-
-        return jsonify({'message': 'Voto registrado correctamente'})
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@propuestas_bp.route('/<id_propuesta>/unvote', methods=['PATCH'])
-def remove_vote(id_propuesta):
-    try:
-        data = request.json
+            return jsonify({'error': 'El votante ya ha votado esta propuesta'}), 400
         
-        # Validar campos requeridos
-        if 'id_votante' not in data:
-            return jsonify({'error': 'El id_votante es requerido'}), 400
-
-        # Eliminar el voto de la propuesta
-        result = db.update_one(
-            {'_id': ObjectId(id_propuesta)},
-            {'$pull': {'votos': {'id_votante': data['id_votante']}}}
-        )
-
-        if result.modified_count == 0:
-            return jsonify({'error': 'No se encontró el voto especificado'}), 404
-
-        # Eliminar la propuesta de la lista del votante
-        db_votantes.update_one(
-            {'_id': ObjectId(data['id_votante'])},
-            {'$pull': {'propuestas_votadas': id_propuesta}}
-        )
-
-        return jsonify({'message': 'Voto eliminado correctamente'})
-
+        # Crear voto con fecha UTC
+        voto = {
+            'id_votante': votante['_id'],
+            'fecha': datetime.now(timezone.utc)
+        }
+        
+        # Actualizar la propuesta agregando el voto
+        db.update_one({'_id': propuesta['_id']}, {'$push': {'votos': voto}})
+        
+        return jsonify({'message': 'Voto registrado'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ---- Las funciones auxiliares (generar_voto_si_coincide, obtener_preguntas, etc.) quedan igual ----
+
+@propuestas_bp.route('/unvote', methods=['POST'])
+def eliminar_voto():
+    """
+    Endpoint para eliminar el voto de un votante a una propuesta.
+    Requiere en JSON: id_propuesta, id_votante
+    """
+    data = request.json
+    
+    if not data or 'id_propuesta' not in data or 'id_votante' not in data:
+        return jsonify({'error': 'Faltan campos obligatorios'}), 400
+    
+    try:
+        propuesta = db.find_one({'_id': ObjectId(data['id_propuesta'])})
+        if not propuesta:
+            return jsonify({'error': 'Propuesta no encontrada'}), 404
+        
+        votante = db_votantes.find_one({'_id': ObjectId(data['id_votante'])})
+        if not votante:
+            return jsonify({'error': 'Votante no encontrado'}), 404
+        
+        # Remover voto del votante
+        db.update_one(
+            {'_id': propuesta['_id']},
+            {'$pull': {'votos': {'id_votante': votante['_id']}}}
+        )
+        
+        return jsonify({'message': 'Voto eliminado'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
