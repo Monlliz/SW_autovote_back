@@ -5,7 +5,6 @@ pymongo
 marshmallow
 requests
 google-genai
-dotenv-load_dotenv
 bcrypt
 PyJWT
 python-dotenv
