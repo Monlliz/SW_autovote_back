@@ -181,7 +181,7 @@ http://127.0.0.1:5000/
 | GET    | `/api/votante/`              | Obtener votante por ID                         |
 | GET    | `/api/votante/correo/`   | Obtener votante por correo electrónico         |
 | PUT    | `/api/votante/`              | Actualizar votante con validación parcial      |
-| PUT    | `/api/votante/manual/`           | Actualizar político por ID con validación parcial, verificando el JWT|
+| PUT    | `/api/votante/manual/`           | Actualizar votante por ID con validación parcial, verificando el JWT|
 | DELETE | `/api/votante/`              | Eliminar votante por ID                        |
 | GET    | `/api/votante/preguntas`         | Obtener cuestionario de preferencias (10 categorías con 3 preguntas cada una) |
 
