@@ -32,6 +32,9 @@ Sistema basado en inteligencia artificial que facilita y optimiza la toma de dec
 - **Marshmallow** → Validación y serialización de datos
 - **Requests** → Cliente HTTP para llamadas externas
 - **Google-Genai** →  Integración con servicios de IA de Google
+- **bcrypt** → Cifra contraseñas de forma segura. 
+- **PyJWT** → Maneja tokens JWT para autenticación. 
+- **python-dotenv** → Carga variables de entorno desde un archivo. 
 
 ### 1️⃣ Clonar el repositorio
 
