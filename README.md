@@ -229,3 +229,5 @@ http://127.0.0.1:5000/
 | GET    | `/api/estadisticas/dashboard`     | Obtener estadísticas generales del sistema      |
 
 ---
+### [Vídeo] (https://drive.google.com/file/d/1Kp-um5qzvAoLxq6xPny1_KGjSqg-aI2E/view?usp=sharing)
+ 
