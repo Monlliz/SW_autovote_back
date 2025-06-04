@@ -173,10 +173,12 @@ http://127.0.0.1:5000/
 | Método | Endpoint                          | Descripción                                    |
 |--------|-----------------------------------|------------------------------------------------|
 | POST   | `/api/votante/`                  | Crear nuevo votante con validación completa    |
+| POST   | `/api/votante/login/`                | Inicia sesión, recibiendo el correo y contraseña, verificando la contraseña existente en la base de datos, con la introducida, además, genera un JWT|
 | GET    | `/api/votante/`                  | Obtener todos los votantes                     |
 | GET    | `/api/votante/`              | Obtener votante por ID                         |
 | GET    | `/api/votante/correo/`   | Obtener votante por correo electrónico         |
 | PUT    | `/api/votante/`              | Actualizar votante con validación parcial      |
+| PUT    | `/api/votante/manual/`           | Actualizar político por ID con validación parcial, verificando el JWT|
 | DELETE | `/api/votante/`              | Eliminar votante por ID                        |
 | GET    | `/api/votante/preguntas`         | Obtener cuestionario de preferencias (10 categorías con 3 preguntas cada una) |
 
