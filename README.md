@@ -39,8 +39,8 @@ Sistema basado en inteligencia artificial que facilita y optimiza la toma de dec
 ### 1️⃣ Clonar el repositorio
 
 ```bash
-git clone https://github.com/kejoperezde/autovote_back.git
-cd autovote_back
+git clone https://github.com/Monlliz/SW_autovote_back.git
+cd SW_autovote_back
 ```
 
 ---
